@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <complex> 
+#include <algorithm>
+#include <functional>
 #define MKL_Complex16 std::complex<double> //Definition to use the proper options
 #include "mkl.h" /* To compile with the option icc -mkl 
 				  * and with the intel module loaded 
@@ -57,8 +59,30 @@ void conversionVecteurArray(vector<complex<double>>& entree, complex<double> sor
 }//Convert a vector to an array of the same format, to use with mkl
 
 void head(double entree[]){ //Affiche le début de la matrice
-	for(int i = 0; i < 5; i++){			   //A faire : cas des dimensions, adapter en template
+	for(int i = 0; i < 5; i++){	
 		cout << entree[i] << endl;
+	}
+}
+
+void head(complex<double> entree[]){ //Affiche le début de la matrice
+	for(int i = 0; i < 5; i++){	
+		cout << entree[i] << endl;
+	}
+}
+
+void svdPartie(int m, int n, complex<double> entree[], complex<double> matU[]){
+	double diag[m];
+	complex<double> matV[m * n];
+	double superb[m - 1];
+
+	LAPACKE_zgesvd(LAPACK_COL_MAJOR, 'S', 'N', m, n, entree, m, diag, matU, m, matV, m, superb);
+}
+
+void tuckerProduct(complex<double> tensor[], complex<double> matrix[], complex<double> sortie[],
+		int index, int dim[]){
+	limit = dim[index];
+	for(int i = 0; i < limite; i++){
+			
 	}
 }
 
@@ -69,21 +93,43 @@ int main(){
 
 	//Loading of all the wavefunctions
 	for(int i = 0; i < 9000; i++){
-		loadInputTensor("wavefunction/vector" + to_string(i) + ".txt", table);
+		loadInputTensor("wavefunction/vector" + to_string(i) + ".txt", table); //g,e,t
 	}
 	cout << table.size() << endl;
 
-	complex<double> matA[table.size()];
+	complex<double> matA[table.size()]; //t * e_max * g_max + e * g_max + g
 	conversionVecteurArray(table, matA);
 
-	double diag[3577];
-	complex<double> taup[3577 * 3577];
-	complex<double> tauq[3577 * 9000];
-	double superb[3576];
+	//Other layouts
+	complex<double> matB[table.size()]; //e * g_max * t_max + g * t_max + t
+	complex<double> matC[table.size()]; //g * t_max * e_max + t * e_max + e
 
-	LAPACKE_zgesvd(LAPACK_COL_MAJOR, 'N', 'N', 3577, 9000, matA, 3577, diag, taup, 3577, tauq, 3577, superb);
+	for(int i = 0; i < table.size(); i++){
+		int t = i / 3577;
+		int e = (i % 3577) / 511;
+		int g = (i % 3577) % 511;
 
-	head(diag);
+		matB[e * 511 * 9000 + g * 9000 + t] = table[i];
+		matC[g * 9000 * 7 + t * 7 + e] = table[i];
+	}
+
+	complex<double> decomp1[511 * 511];
+	svdPartie(511, 9000 * 7, matA, decomp1);
+	head(decomp1);
+	cout << endl;
+
+	complex<double> decomp2[9000 * 3577];
+	svdPartie(9000, 511 * 7, matB, decomp2);
+	head(decomp2);
+	cout << endl;
+
+	complex<double> decomp3[7 * 7];
+	svdPartie(7, 511 * 9000, matC, decomp3);
+	head(decomp3);
+	cout << endl;
+
+	//sort(diag, diag + 3577, greater<double>());
+	//head(diag); //Already sorted
 
 	return 1;
 }
