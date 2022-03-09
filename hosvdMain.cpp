@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <complex> 
+#define MKL_Complex16 std::complex<double> //Definition to use the proper options
 #include "mkl.h" /* To compile with the option icc -mkl 
 				  * and with the intel module loaded 
 				  */
@@ -55,6 +56,12 @@ void conversionVecteurArray(vector<complex<double>>& entree, complex<double> sor
 	}
 }//Convert a vector to an array of the same format, to use with mkl
 
+void head(double entree[]){ //Affiche le début de la matrice
+	for(int i = 0; i < 5; i++){			   //A faire : cas des dimensions, adapter en template
+		cout << entree[i] << endl;
+	}
+}
+
 int main(){
 	setprecision(12); //requires <iomanip>
 	
@@ -69,14 +76,14 @@ int main(){
 	complex<double> matA[table.size()];
 	conversionVecteurArray(table, matA);
 
-	double diag[];
-	double offDiag[];
-	complex<double> taup[];
-	complex<double> tauq[];
+	double diag[3577];
+	complex<double> taup[3577 * 3577];
+	complex<double> tauq[3577 * 9000];
+	double superb[3576];
 
-	LAPACKE_zgebrd(LAPACK_ROW_MAJOR, 3577, 9000, matA, 9000, diag, offDiag,taup, tauq);
+	LAPACKE_zgesvd(LAPACK_COL_MAJOR, 'N', 'N', 3577, 9000, matA, 3577, diag, taup, 3577, tauq, 3577, superb);
 
-	cout << matA[0] << endl;
+	head(diag);
 
 	return 1;
 }
