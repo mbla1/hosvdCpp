@@ -47,6 +47,7 @@ void loadInputTensor(string path, vector<complex<double>>& tableau){ //Vectors a
 			nombre = complex<double>(entreeVec[0], entreeVec[1]); //Not elegant, but it works
 
 			tableau.push_back(nombre);
+			entreeVec.clear(); //Otherwise I only take into account the first entry
 		}
 	}
 	fichier.close();
@@ -106,12 +107,16 @@ int main(){
 	
 	vector<complex<double>> table;
 
-	cout << "Loading of all the wavefunctions" << endl;
+	cout << "Loading all the wavefunctions" << endl;
 	for(int i = 0; i < 9000; i++){
 		loadInputTensor("wavefunction/vector" + to_string(i) + ".txt", table); //g,e,t
 	}
 
-	//cout << table.size() << endl;
+	cout << table.size() << endl;
+	
+	for(int i = 0; i < 5; i++){
+		cout << table[i] << endl;
+	}
 
 	complex<double> matA[table.size()]; //t * e_max * g_max + e * g_max + g
 	conversionVecteurArray(table, matA);
@@ -130,6 +135,12 @@ int main(){
 		matB[e * 511 * 9000 + g * 9000 + t] = table[i];
 		matC[g * 9000 * 7 + t * 7 + e] = table[i];
 	}
+
+	head(matA);
+	cout << endl;
+	head(matB);
+	cout << endl;
+	head(matC);
 
 	cout << "Computations of the SVD" << endl;
 
@@ -152,7 +163,7 @@ int main(){
 
 	int dimKron = 9000 * 3577 * 7 * 7;
 	complex<double> *kronecker = (complex<double>*) malloc(dimKron * sizeof(complex<double>));//Dynamic allocation due to the size of the array
-	produitKronecker(decomp2, decomp3, kronecker, 9000 * 3577, 7 * 7);
+	produitKronecker(decomp2, decomp3, kronecker, 9000 * 3577, 7 * 7); 
 
 	complex<double> hermit[511 * 511];
 	conjugueComplexe(decomp1, hermit, 511, 511);
