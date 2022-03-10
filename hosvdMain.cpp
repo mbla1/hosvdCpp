@@ -106,11 +106,12 @@ int main(){
 	
 	vector<complex<double>> table;
 
-	//Loading of all the wavefunctions
+	cout << "Loading of all the wavefunctions" << endl;
 	for(int i = 0; i < 9000; i++){
 		loadInputTensor("wavefunction/vector" + to_string(i) + ".txt", table); //g,e,t
 	}
-	cout << table.size() << endl;
+
+	//cout << table.size() << endl;
 
 	complex<double> matA[table.size()]; //t * e_max * g_max + e * g_max + g
 	conversionVecteurArray(table, matA);
@@ -118,6 +119,8 @@ int main(){
 	//Other layouts
 	complex<double> matB[table.size()]; //e * g_max * t_max + g * t_max + t
 	complex<double> matC[table.size()]; //g * t_max * e_max + t * e_max + e
+
+	cout << "Conversion of the format of the arrays" << endl;
 
 	for(int i = 0; i < table.size(); i++){
 		int t = i / 3577;
@@ -128,20 +131,24 @@ int main(){
 		matC[g * 9000 * 7 + t * 7 + e] = table[i];
 	}
 
+	cout << "Computations of the SVD" << endl;
+
 	complex<double> decomp1[511 * 511];
 	svdPartie(511, 9000 * 7, matA, decomp1);
-	head(decomp1);
-	cout << endl;
+	//head(decomp1);
+	//cout << endl;
 
 	complex<double> decomp2[9000 * 3577];
 	svdPartie(9000, 511 * 7, matB, decomp2);
-	head(decomp2);
-	cout << endl;
+	//head(decomp2);
+	//cout << endl;
 
 	complex<double> decomp3[7 * 7];
 	svdPartie(7, 511 * 9000, matC, decomp3);
-	head(decomp3);
-	cout << endl;
+	//head(decomp3);
+	//cout << endl;
+
+	cout << "Matrix products in preparation" << endl;
 
 	int dimKron = 9000 * 3577 * 7 * 7;
 	complex<double> *kronecker = (complex<double>*) malloc(dimKron * sizeof(complex<double>));//Dynamic allocation due to the size of the array
@@ -160,13 +167,16 @@ int main(){
 	cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, 511, 25039, 63000, &alpha, 
 			premierResultat, 511, kronecker, 63000, &beta, deuxiemeResultat, 511);
 
-	head(deuxiemeResultat);
+	//head(deuxiemeResultat);
+	
+	cout << "Sorting of the results" << endl;
 
 	double resultats[511 * 25039];
 	getModulus(deuxiemeResultat, resultats, 511 * 25039);
 	sort(resultats, resultats + 511 * 25039, greater<double>());
 
-	cout << endl;
+	//cout << endl;
+	cout << "Here are the results" << endl;
 	head(resultats);
 
 	//Now we compute the modulus and sort the list
