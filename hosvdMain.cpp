@@ -78,11 +78,20 @@ void svdPartie(int m, int n, complex<double> entree[], complex<double> matU[]){
 	LAPACKE_zgesvd(LAPACK_COL_MAJOR, 'S', 'N', m, n, entree, m, diag, matU, m, matV, m, superb);
 }
 
-void tuckerProduct(complex<double> tensor[], complex<double> matrix[], complex<double> sortie[],
-		int index, int dim[]){
-	limit = dim[index];
-	for(int i = 0; i < limite; i++){
-			
+void produitKronecker(complex<double> entree1[], complex<double> entree2[], complex<double> sortie[],
+		int dim1, int dim2){
+	for(int i = 0; i < dim1; i++){
+		for(int j = 0; j < dim2; j++){
+			sortie[i * dim2 + j] = entree1[i] * entree2[j];
+		}
+	}
+}
+
+void conjugueComplexe(complex<double> entree[], complex<double> sortie[], int nrow, int ncol){
+	for(int i = 0; i < nrow; i++){
+		for(int j = 0; j < ncol; j++){
+			sortie[j * nrow + i] = conj(entree[i * ncol + j]);
+		}
 	}
 }
 
@@ -127,6 +136,16 @@ int main(){
 	svdPartie(7, 511 * 9000, matC, decomp3);
 	head(decomp3);
 	cout << endl;
+
+	int dimKron = 9000 * 3577 * 7 * 7;
+	complex<double> *kronecker = (complex<double>*) malloc(dimKron * sizeof(complex<double>));//Dynamic allocation due to the size of the array
+	produitKronecker(decomp2, decomp3, kronecker, 9000 * 3577, 7 * 7);
+
+	complex<double> hermit[511 * 511];
+	conjugueComplexe(decomp1, hermit, 511, 511);
+
+	//And now the matrix products
+
 
 	//sort(diag, diag + 3577, greater<double>());
 	//head(diag); //Already sorted
