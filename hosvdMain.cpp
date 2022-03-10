@@ -95,6 +95,12 @@ void conjugueComplexe(complex<double> entree[], complex<double> sortie[], int nr
 	}
 }
 
+void getModulus(complex<double> entree[], double sortie[], int dim){
+	for(int i = 0; i < dim; i++){
+		sortie[i] = abs(entree[i]);
+	}
+}
+
 int main(){
 	setprecision(12); //requires <iomanip>
 	
@@ -145,10 +151,28 @@ int main(){
 	conjugueComplexe(decomp1, hermit, 511, 511);
 
 	//And now the matrix products
+	complex<double> premierResultat[511 * 63000];
+	complex<double> alpha = 1.;
+	complex<double> beta = 0.;
+	cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, 511, 63000, 511, &alpha, hermit, 511, matA, 511, &beta, premierResultat, 511);
 
+	complex<double> *deuxiemeResultat = (complex<double>*) malloc(511 * 25039 * sizeof(complex<double>));
+	cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, 511, 25039, 63000, &alpha, 
+			premierResultat, 511, kronecker, 63000, &beta, deuxiemeResultat, 511);
 
+	head(deuxiemeResultat);
+
+	double resultats[511 * 25039];
+	getModulus(deuxiemeResultat, resultats, 511 * 25039);
+	sort(resultats, resultats + 511 * 25039, greater<double>());
+
+	cout << endl;
+	head(resultats);
+
+	//Now we compute the modulus and sort the list
+	
 	//sort(diag, diag + 3577, greater<double>());
 	//head(diag); //Already sorted
 
-	return 1;
+	return 0;
 }
