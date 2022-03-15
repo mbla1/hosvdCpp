@@ -31,6 +31,9 @@ void decoupe(const string& chaine, char sep, vector<double>& sortie){
 	}
 }
 
+/* Loads the time, electronic states and grid tensor
+ * and store it into a simple vector
+ */
 void loadInputTensor(string path, vector<complex<double>>& tableau){ //Vectors are not given as reference by default
 	ifstream fichier;
 	fichier.open(path);
@@ -91,7 +94,7 @@ void produitKronecker(complex<double> entree1[], complex<double> entree2[], comp
 void conjugueComplexe(complex<double> entree[], complex<double> sortie[], int nrow, int ncol){
 	for(int i = 0; i < nrow; i++){
 		for(int j = 0; j < ncol; j++){
-			sortie[j * nrow + i] = conj(entree[i * ncol + j]);
+			sortie[j * nrow + i] = conj(entree[i * nrow + j]);
 		}
 	}
 }
@@ -136,28 +139,35 @@ int main(){
 		matC[g * 9000 * 7 + t * 7 + e] = table[i];
 	}
 
-	head(matA);
-	cout << endl;
-	head(matB);
-	cout << endl;
-	head(matC);
+	//head(matA);
+	//cout << endl;
+	//head(matB);
+	//cout << endl;
+	//head(matC);
 
 	cout << "Computations of the SVD" << endl;
 
 	complex<double> decomp1[511 * 511];
 	svdPartie(511, 9000 * 7, matA, decomp1);
-	//head(decomp1);
-	//cout << endl;
+	head(decomp1);
+	cout << endl;
 
 	complex<double> decomp2[9000 * 3577];
 	svdPartie(9000, 511 * 7, matB, decomp2);
-	//head(decomp2);
-	//cout << endl;
+	head(decomp2);
+	cout << endl;
 
 	complex<double> decomp3[7 * 7];
 	svdPartie(7, 511 * 9000, matC, decomp3);
-	//head(decomp3);
-	//cout << endl;
+	head(decomp3);
+	cout << endl;
+
+	for(int i = 0; i < 7; i++){
+		for(int j = 0; j < 7; j++){
+			cout << decomp3[i * 7 + j];
+		}
+		cout << endl;
+	}
 
 	cout << "Matrix products in preparation" << endl;
 
@@ -165,8 +175,12 @@ int main(){
 	complex<double> *kronecker = (complex<double>*) malloc(dimKron * sizeof(complex<double>));//Dynamic allocation due to the size of the array
 	produitKronecker(decomp2, decomp3, kronecker, 9000 * 3577, 7 * 7); 
 
+	head(kronecker);
+
 	complex<double> hermit[511 * 511];
 	conjugueComplexe(decomp1, hermit, 511, 511);
+
+	head(hermit);
 
 	//And now the matrix products
 	complex<double> premierResultat[511 * 63000];
@@ -178,7 +192,7 @@ int main(){
 	cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, 511, 25039, 63000, &alpha, 
 			premierResultat, 511, kronecker, 63000, &beta, deuxiemeResultat, 511);
 
-	//head(deuxiemeResultat);
+	head(deuxiemeResultat);
 	
 	cout << "Sorting of the results" << endl;
 
