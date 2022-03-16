@@ -68,9 +68,9 @@ void head(double entree[]){ //Affiche le début de la matrice
 	}
 }
 
-void head(complex<double> entree[]){ //Affiche le début de la matrice
+void head(complex<double> entree[], int positionInitiale = 0){ //Affiche le début de la matrice
 	for(int i = 0; i < 5; i++){	
-		cout << entree[i] << endl;
+		cout << entree[positionInitiale + i] << endl;
 	}
 }
 
@@ -135,31 +135,39 @@ int main(){
 		int e = (i % 3577) / 511;
 		int g = (i % 3577) % 511;
 
-		matB[e * 511 * 9000 + g * 9000 + t] = table[i];
-		matC[g * 9000 * 7 + t * 7 + e] = table[i];
+		//Utilisation de permutations non cycliques
+
+		matB[g * 7 * 9000 + e * 9000 + t] = table[i]; //t,e,g
+		matC[t * 511 * 7 + g * 7 + e] = table[i]; //e,g,t
 	}
+
+	cout << "Test layout matB:" << endl;
 
 	//head(matA);
 	//cout << endl;
-	//head(matB);
-	//cout << endl;
-	//head(matC);
+	head(matB);
+	cout << endl;
+	head(matB, 9000);
+	cout << endl;
+	head(matC);
+	cout << endl;
+	head(matC, 7);
 
 	cout << "Computations of the SVD" << endl;
 
 	complex<double> decomp1[511 * 511];
 	svdPartie(511, 9000 * 7, matA, decomp1);
-	head(decomp1);
+	head(decomp1, 511);
 	cout << endl;
 
 	complex<double> decomp2[9000 * 3577];
-	svdPartie(9000, 511 * 7, matB, decomp2);
-	head(decomp2);
+	svdPartie(9000, 511 * 7, matB, decomp2); //all the signs seem inverted...
+	head(decomp2, 9000);
 	cout << endl;
 
 	complex<double> decomp3[7 * 7];
 	svdPartie(7, 511 * 9000, matC, decomp3);
-	head(decomp3);
+	//head(decomp3);
 	cout << endl;
 
 	for(int i = 0; i < 7; i++){
@@ -175,11 +183,13 @@ int main(){
 	complex<double> *kronecker = (complex<double>*) malloc(dimKron * sizeof(complex<double>));//Dynamic allocation due to the size of the array
 	produitKronecker(decomp2, decomp3, kronecker, 9000 * 3577, 7 * 7); 
 
-	head(kronecker);
+	cout << "Kronecker product: " << endl;
+	head(kronecker, 63000);
 
 	complex<double> hermit[511 * 511];
 	conjugueComplexe(decomp1, hermit, 511, 511);
 
+	cout << "Hermitian matrix:" << endl;
 	head(hermit);
 
 	//And now the matrix products
@@ -192,6 +202,7 @@ int main(){
 	cblas_zgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, 511, 25039, 63000, &alpha, 
 			premierResultat, 511, kronecker, 63000, &beta, deuxiemeResultat, 511);
 
+	cout << "Non-sorted result:" << endl;
 	head(deuxiemeResultat);
 	
 	cout << "Sorting of the results" << endl;
