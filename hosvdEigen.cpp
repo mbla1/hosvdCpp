@@ -54,18 +54,6 @@ void loadInputTensor(string path, vector<complex<double>>& tableau){ //Vectors a
 	fichier.close();
 }
 
-void head(double entree[]){ //Affiche le début d'une matrice
-	for(int i = 0; i < 5; i++){	
-		cout << entree[i] << endl;
-	}
-}
-
-void head(complex<double> entree[], int positionInitiale = 0){ //Affiche le début d'une matrice
-	for(int i = 0; i < 5; i++){	
-		cout << entree[positionInitiale + i] << endl;
-	}
-}
-
 void produitKronecker(const Eigen::MatrixXcd &entree1, const Eigen::MatrixXcd &entree2, Eigen::MatrixXcd &sortie){
 	// You need to pass it by reference idiot!
 	int lignes = entree1.rows();
@@ -112,13 +100,6 @@ int main(){
 		matC(e, g * 9000 + t) = table[i]; // e,g,t
 	}
 
-	cout << "Test layout matB:" << endl;
-
-	cout << matA.topLeftCorner(5, 5) << endl << endl;
-	cout << matB.topLeftCorner(5, 5) << endl << endl;
-	cout << matC.topLeftCorner(5, 5) << endl << endl;
-
-
 	cout << "Computations of the SVD" << endl;
 
 	Eigen::JacobiSVD<Eigen::MatrixXcd> svd1(matA, Eigen::ComputeThinU);
@@ -134,12 +115,10 @@ int main(){
 	Eigen::MatrixXcd kronecker(9000 * 7, 3577 * 7);
 	produitKronecker(svd2.matrixU(), svd3.matrixU(), kronecker);
 
-	cout << kronecker.topLeftCorner(5, 5) << "\n\n";
-
 	Eigen::MatrixXcd resultat;
 	resultat = svd1.matrixU().adjoint() * matA * kronecker;
 
-	cout << resultat.topLeftCorner(5, 5) << "\n\n";
+	cout << "Outputting the results\n";
 
 	vector<double> entrees;
 
