@@ -128,9 +128,14 @@ int main(){
 
 	sort(entrees.begin(), entrees.end(), greater<double>());
 
-	for(int i = 0; i < 5; i++){
-		cout << entrees[i] << "\n";
+	ofstream sortieFichier;
+	sortieFichier.open("code/resultatsHosvd4.txt");
+
+	for(int i = 0; i < 10000; i++){
+		sortieFichier << entrees[i] << "\n";
 	}
+
+	sortieFichier.close();
 
 	return 0;
 }
