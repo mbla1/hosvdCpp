@@ -66,28 +66,14 @@ void head(complex<double> entree[], int positionInitiale = 0){ //Affiche le déb
 	}
 }
 
-void svdPartie(int m, int n, complex<double> entree[], complex<double> matU[]){
-	double diag[m];
-	complex<double> matV[m * n];
-	double superb[m - 1];
-
-	//LAPACKE_zgesvd(LAPACK_COL_MAJOR, 'S', 'N', m, n, entree, m, diag, matU, m, matV, m, superb);
-}
-
-void produitKronecker(Eigen::MatrixXcd entree1, Eigen::MatrixXcd entree2, Eigen::MatrixXcd sortie){
-	int dim1 = entree1.size();
-	int dim2 = entree2.size();
-	for(int i = 0; i < dim1; i++){
-		for(int j = 0; j < dim2; j++){
-			sortie(i * dim2 + j) = entree1(i) * entree2(j);
-		}
-	}
-}
-
-void conjugueComplexe(complex<double> entree[], complex<double> sortie[], int nrow, int ncol){
-	for(int i = 0; i < nrow; i++){
-		for(int j = 0; j < ncol; j++){
-			sortie[j * nrow + i] = conj(entree[i * nrow + j]);
+void produitKronecker(const Eigen::MatrixXcd &entree1, const Eigen::MatrixXcd &entree2, Eigen::MatrixXcd &sortie){
+	// You need to pass it by reference idiot!
+	int lignes = entree1.rows();
+	int colonnes = entree1.cols();
+	for(int i = 0; i < lignes; i++){
+		for(int j = 0; j < colonnes; j++){
+			sortie.block(i * entree2.rows(), j * entree2.cols(), 
+					entree2.rows(), entree2.cols()) = entree1(i, j) * entree2; // Produit bloc par bloc
 		}
 	}
 }
@@ -149,16 +135,23 @@ int main(){
 	produitKronecker(svd2.matrixU(), svd3.matrixU(), kronecker);
 
 	cout << kronecker.topLeftCorner(5, 5) << "\n\n";
-	cout << "Somme : " << kronecker.sum() << "\n";
-
-	cout << "Taille U1: (" << svd1.matrixU().adjoint().rows() << "," << svd1.matrixU().adjoint().cols() << ")\n";
-	cout << "Taille matA: (" << matA.rows() << "," << matA.cols() << ")\n";
-	cout << "Taille kronecker: (" << kronecker.rows() << "," << kronecker.cols() << ")\n";
 
 	Eigen::MatrixXcd resultat;
 	resultat = svd1.matrixU().adjoint() * matA * kronecker;
 
 	cout << resultat.topLeftCorner(5, 5) << "\n\n";
+
+	vector<double> entrees;
+
+	for(int i = 0; i < resultat.size(); i++){
+		entrees.push_back(abs(resultat(i)));
+	}
+
+	sort(entrees.begin(), entrees.end(), greater<double>());
+
+	for(int i = 0; i < 5; i++){
+		cout << entrees[i] << "\n";
+	}
 
 	return 0;
 }
