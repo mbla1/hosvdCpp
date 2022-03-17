@@ -81,7 +81,7 @@ int main(){
 	constexpr int finalTime = 8999;
 	constexpr int timeSize = finalTime - initialTime + 1;
 	constexpr int outputSize = 10000;
-	string path{"code/resultatsHosvd.txt"};
+	string path{"resultats/resultatsHosvd.txt"};
 
 	vector<complex<double>> table;
 
