@@ -74,30 +74,38 @@ void getModulus(complex<double> entree[], double sortie[], int dim){
 
 int main(){
 	setprecision(12); //requires <iomanip>
-	
+
+	constexpr int gridSize = 511;
+	constexpr int nElec = 7;	
+	constexpr int initialTime = 0;
+	constexpr int finalTime = 8999;
+	constexpr int timeSize = finalTime - initialTime + 1;
+	constexpr int outputSize = 10000;
+	string path{"code/resultatsHosvd.txt"};
+
 	vector<complex<double>> table;
 
 	cout << "Loading all the wavefunctions" << endl;
-	for(int i = 0; i < 9000; i++){
+	for(int i = initialTime; i < (finalTime + 1); i++){
 		loadInputTensor("wavefunction/vector" + to_string(i) + ".txt", table); //g,e,t
 	}
 
-	Eigen::MatrixXcd matA(511, 9000 * 7); // g,e,t	
-	Eigen::MatrixXcd matB(9000, 511 * 7); // g,e,t	
-	Eigen::MatrixXcd matC(7, 511 * 9000); // g,e,t	
+	Eigen::MatrixXcd matA(gridSize, timeSize * nElec); // g,e,t	
+	Eigen::MatrixXcd matB(timeSize, gridSize * nElec); // g,e,t	
+	Eigen::MatrixXcd matC(nElec, gridSize * timeSize); // g,e,t	
 
 	cout << "Conversion of the format of the arrays" << endl;
 
 	for(int i = 0; i < table.size(); i++){
-		int t = i / 3577;
-		int e = (i % 3577) / 511;
-		int g = (i % 3577) % 511;
+		int t = i / (gridSize * nElec);
+		int e = (i % (gridSize * nElec)) / gridSize;
+		int g = (i % (gridSize * nElec)) % gridSize;
 
 		//Utilisation de permutations non cycliques
 
-		matA(g, t * 7 + e) = table[i]; // g,e,t
-		matB(t, e * 511 + g) = table[i]; // t,e,g
-		matC(e, g * 9000 + t) = table[i]; // e,g,t
+		matA(g, t * nElec + e) = table[i]; // g,e,t
+		matB(t, e * gridSize + g) = table[i]; // t,e,g
+		matC(e, g * timeSize + t) = table[i]; // e,g,t
 	}
 
 	cout << "Computations of the SVD" << endl;
@@ -112,7 +120,7 @@ int main(){
 
 	cout << "Matrix products in preparation" << endl;
 
-	Eigen::MatrixXcd kronecker(9000 * 7, 3577 * 7);
+	Eigen::MatrixXcd kronecker(timeSize * nElec, gridSize * nElec * nElec);
 	produitKronecker(svd2.matrixU(), svd3.matrixU(), kronecker);
 
 	Eigen::MatrixXcd resultat;
@@ -121,21 +129,40 @@ int main(){
 	cout << "Outputting the results\n";
 
 	vector<double> entrees;
+	vector<int> index;
 
 	for(int i = 0; i < resultat.size(); i++){
 		entrees.push_back(abs(resultat(i)));
+		index.push_back(i);
 	}
 
-	sort(entrees.begin(), entrees.end(), greater<double>());
+	//sort(entrees.begin(), entrees.end(), greater<double>());
+	sort(index.begin(), index.end(), // Personnalized sort on indices
+			[&](int i, int j){return entrees[i] > entrees[j];}); // lambda function
 
 	ofstream sortieFichier;
-	sortieFichier.open("code/resultatsHosvd4.txt");
+	sortieFichier.open(path);
 
-	for(int i = 0; i < 10000; i++){
-		sortieFichier << entrees[i] << "\n";
+	if(!sortieFichier){
+		cerr << "Wrong filename!\n";
+		return -1;
+	}
+
+	sortieFichier << "valeur\tindex\n";
+
+	for(int i = 0; i < outputSize; i++){
+		sortieFichier << entrees[index[i]] << "\t" << index[i] << "\n";
 	}
 
 	sortieFichier.close();
+	
+	double somme = 0.;
+
+	for(double d : entrees){
+		somme += d * d;
+	}
+
+	cout << "The sum of all values is: " << somme << "\n";
 
 	return 0;
 }
