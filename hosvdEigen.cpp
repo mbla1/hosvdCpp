@@ -148,21 +148,19 @@ int main(){
 		return -1;
 	}
 
-	sortieFichier << "valeur\tindex\n";
+	sortieFichier << "valeur\tindex\tsomme_carre\n";
 
-	for(int i = 0; i < outputSize; i++){
-		sortieFichier << entrees[index[i]] << "\t" << index[i] << "\n";
-	}
-
-	sortieFichier.close();
-	
 	double somme = 0.;
 
 	for(double d : entrees){
 		somme += d * d;
 	}
 
-	cout << "The sum of all values is: " << somme << "\n";
+	for(int i = 0; i < outputSize; i++){
+		sortieFichier << entrees[index[i]] << "\t" << index[i] << "\t" << somme << "\n";
+	}
 
+	sortieFichier.close();
+	
 	return 0;
 }
