@@ -1,11 +1,11 @@
 #include <iostream>
-#include <iomanip>
+#include <iomanip> // setprecision of cout
 #include <fstream>
 #include <string>
 #include <vector>
 #include <complex> 
-#include <algorithm>
-#include <functional>
+#include <algorithm> // sort function
+//#include <functional> // max functional
 #define EIGEN_USE_MKL_ALL
 #include <Eigen>
 
@@ -30,7 +30,7 @@ void decoupe(const string& chaine, char sep, vector<double>& sortie){
 }
 
 /* Loads the time, electronic states and grid tensor
- * and store it into a simple vector
+ * and stores it into a simple vector
  */
 void loadInputTensor(string path, vector<complex<double>>& tableau){ //Vectors are not given as reference by default
 	ifstream fichier;
@@ -54,6 +54,8 @@ void loadInputTensor(string path, vector<complex<double>>& tableau){ //Vectors a
 	fichier.close();
 }
 
+// Kronecker product between two matrices
+
 void produitKronecker(const Eigen::MatrixXcd &entree1, const Eigen::MatrixXcd &entree2, Eigen::MatrixXcd &sortie){
 	// You need to pass it by reference idiot!
 	int lignes = entree1.rows();
@@ -66,22 +68,16 @@ void produitKronecker(const Eigen::MatrixXcd &entree1, const Eigen::MatrixXcd &e
 	}
 }
 
-void getModulus(complex<double> entree[], double sortie[], int dim){
-	for(int i = 0; i < dim; i++){
-		sortie[i] = abs(entree[i]);
-	}
-}
-
 int main(){
 	setprecision(12); //requires <iomanip>
 
 	constexpr int gridSize = 511;
 	constexpr int nElec = 7;	
-	constexpr int initialTime = 0;
+	constexpr int initialTime = 700; // in au
 	constexpr int finalTime = 8999;
 	constexpr int timeSize = finalTime - initialTime + 1;
-	constexpr int outputSize = 10000;
-	string path{"resultats/resultatsHosvd.txt"};
+	constexpr int outputSize = 10000; // Number of values outputted
+	string path{"resultats/resultatsHosvdAfterPulse.txt"};
 
 	vector<complex<double>> table;
 
@@ -90,9 +86,9 @@ int main(){
 		loadInputTensor("wavefunction/vector" + to_string(i) + ".txt", table); //g,e,t
 	}
 
-	Eigen::MatrixXcd matA(gridSize, timeSize * nElec); // g,e,t	
-	Eigen::MatrixXcd matB(timeSize, gridSize * nElec); // g,e,t	
-	Eigen::MatrixXcd matC(nElec, gridSize * timeSize); // g,e,t	
+	Eigen::MatrixXcd matA(gridSize, timeSize * nElec); 	
+	Eigen::MatrixXcd matB(timeSize, gridSize * nElec); 	
+	Eigen::MatrixXcd matC(nElec, gridSize * timeSize); 	
 
 	cout << "Conversion of the format of the arrays" << endl;
 
@@ -110,7 +106,7 @@ int main(){
 
 	cout << "Computations of the SVD" << endl;
 
-	Eigen::JacobiSVD<Eigen::MatrixXcd> svd1(matA, Eigen::ComputeThinU);
+	Eigen::JacobiSVD<Eigen::MatrixXcd> svd1(matA, Eigen::ComputeThinU); // ThinSVD for only the u vectors
 	cout << "First SVD done!\n";
 	Eigen::JacobiSVD<Eigen::MatrixXcd> svd2(matB, Eigen::ComputeThinU);
 	cout << "Second SVD done!\n";
@@ -131,6 +127,7 @@ int main(){
 	vector<double> entrees;
 	vector<int> index;
 
+	// stores the modulus of the value
 	for(int i = 0; i < resultat.size(); i++){
 		entrees.push_back(abs(resultat(i)));
 		index.push_back(i);
