@@ -8,6 +8,9 @@
 //#include <functional> // max functional
 #define EIGEN_USE_MKL_ALL
 #include <Eigen>
+#include <omp.h>
+
+#define NUM_THREADS 16 // Number of threads to use
 
 using namespace std;
 
@@ -30,7 +33,7 @@ void decoupe(const string& chaine, char sep, vector<double>& sortie){
 }
 
 /* Loads the time, electronic states and grid tensor
- * and stores it into a simple vector
+ * and appends it into a simple vector for storage
  */
 void loadInputTensor(string path, vector<complex<double>>& tableau){ //Vectors are not given as reference by default
 	ifstream fichier;
@@ -68,96 +71,157 @@ void produitKronecker(const Eigen::MatrixXcd &entree1, const Eigen::MatrixXcd &e
 	}
 }
 
+// Storage for the index of an element of the tensor
+
+struct Index{
+	int e;
+	int q1;
+	int q2;
+};
+
+Index conversion_index(int idx, int coord1Size, int coord2Size){
+	
+	Index index_temp;
+	
+	index_temp.e = idx / (coord1Size * coord2Size);
+	index_temp.q1 = (idx % (coord1Size * coord2Size)) / coord2Size;
+	index_temp.q2 = (idx % (coord1Size * coord2Size)) % coord2Size;
+
+	return index_temp;
+}
+
 int main(){
 	setprecision(12); //requires <iomanip>
+	omp_set_num_threads(NUM_THREADS); // requires <omp.h>
 
-	constexpr int gridSize = 511;
-	constexpr int nElec = 7;	
-	constexpr int initialTime = 700; // in au
-	constexpr int finalTime = 8999;
-	constexpr int timeSize = finalTime - initialTime + 1;
-	constexpr int outputSize = 10000; // Number of values outputted
-	string path{"resultats/resultatsHosvdAfterPulse.txt"};
-
-	vector<complex<double>> table;
-
-	cout << "Loading all the wavefunctions" << endl;
-	for(int i = initialTime; i < (finalTime + 1); i++){
-		loadInputTensor("wavefunction/vector" + to_string(i) + ".txt", table); //g,e,t
-	}
-
-	Eigen::MatrixXcd matA(gridSize, timeSize * nElec); 	
-	Eigen::MatrixXcd matB(timeSize, gridSize * nElec); 	
-	Eigen::MatrixXcd matC(nElec, gridSize * timeSize); 	
-
-	cout << "Conversion of the format of the arrays" << endl;
-
-	for(int i = 0; i < table.size(); i++){
-		int t = i / (gridSize * nElec);
-		int e = (i % (gridSize * nElec)) / gridSize;
-		int g = (i % (gridSize * nElec)) % gridSize;
-
-		//Utilisation de permutations non cycliques
-
-		matA(g, t * nElec + e) = table[i]; // g,e,t
-		matB(t, e * gridSize + g) = table[i]; // t,e,g
-		matC(e, g * timeSize + t) = table[i]; // e,g,t
-	}
-
-	cout << "Computations of the SVD" << endl;
-
-	Eigen::JacobiSVD<Eigen::MatrixXcd> svd1(matA, Eigen::ComputeThinU); // ThinSVD for only the u vectors
-	cout << "First SVD done!\n";
-	Eigen::JacobiSVD<Eigen::MatrixXcd> svd2(matB, Eigen::ComputeThinU);
-	cout << "Second SVD done!\n";
-	Eigen::JacobiSVD<Eigen::MatrixXcd> svd3(matC, Eigen::ComputeThinU);
-	cout << "Third SVD done!\n";
-
-
-	cout << "Matrix products in preparation" << endl;
-
-	Eigen::MatrixXcd kronecker(timeSize * nElec, gridSize * nElec * nElec);
-	produitKronecker(svd2.matrixU(), svd3.matrixU(), kronecker);
-
-	Eigen::MatrixXcd resultat;
-	resultat = svd1.matrixU().adjoint() * matA * kronecker;
-
-	cout << "Outputting the results\n";
-
-	vector<double> entrees;
-	vector<int> index;
-
-	// stores the modulus of the value
-	for(int i = 0; i < resultat.size(); i++){
-		entrees.push_back(abs(resultat(i)));
-		index.push_back(i);
-	}
-
-	//sort(entrees.begin(), entrees.end(), greater<double>());
-	sort(index.begin(), index.end(), // Personnalized sort on indices
-			[&](int i, int j){return entrees[i] > entrees[j];}); // lambda function
+	constexpr int coord1Size = 146;
+	constexpr int coord2Size = 184;
+	constexpr int nElec = 3;	
+	constexpr int outputSize = 100; // Number of values outputted
+	constexpr int time_limit = 160; // AU
+	constexpr int time_step = 5; // AU
+	string path{"resultats/"};
 
 	ofstream sortieFichier;
-	sortieFichier.open(path);
+	sortieFichier.open(path + "resultatsHosvd.txt");
 
 	if(!sortieFichier){
 		cerr << "Wrong filename!\n";
 		return -1;
 	}
 
-	sortieFichier << "valeur\tindex\tsomme_carre\n";
+	sortieFichier << "temps\tvaleur\te\tq1\tq2\tsomme_carre\n";
 
-	double somme = 0.;
+	ofstream sortieU;
+	sortieU.open(path + "matU.txt");
 
-	for(double d : entrees){
-		somme += d * d;
+	ofstream sortieV;
+	sortieV.open(path + "matV.txt");
+
+	ofstream sortieW;
+	sortieW.open(path + "matW.txt");
+
+	#pragma omp parallel for ordered schedule(static, 1) // Parallel computing
+	for(int time = 0; time < time_limit; time += time_step){ // Main loop
+		vector<complex<double>> table;
+
+		cout << "Loading a wavefunction" << endl;
+		cout << "Time: " << time << "\n";
+		loadInputTensor("waveFunction6O1/vector" + to_string(time) + ".txt", table); // q2,q1,e
+
+		Eigen::MatrixXcd matA(coord2Size, nElec * coord1Size); 	
+		Eigen::MatrixXcd matB(nElec, coord2Size * coord1Size); 	
+		Eigen::MatrixXcd matC(coord1Size, coord2Size * nElec); 	
+
+		cout << "Conversion of the format of the arrays" << endl;
+
+		for(int i = 0; i < table.size(); i++){
+			int e = i / (coord1Size * coord2Size);
+			int q1 = (i % (coord1Size * coord2Size)) / coord2Size;
+			int q2 = (i % (coord1Size * coord2Size)) % coord2Size;
+
+			// Utilisation de permutations non cycliques
+
+			matA(q2, e * coord1Size + q1) = table[i]; // q2,q1,e
+			matB(e, q2 * coord1Size + q1) = table[i]; // e,q1,q2
+			matC(q1, e * coord2Size + q2) = table[i]; // q1,q2,e
+		}
+
+		cout << "Computations of the SVD" << endl;
+
+		/* Comparing with the Ramesh article:
+		 * matA = U
+		 * matB = V
+		 * matC = W
+		 */
+
+		Eigen::JacobiSVD<Eigen::MatrixXcd> svd1(matA, Eigen::ComputeThinU); // ThinSVD for only the u vectors
+		cout << "First SVD done!\n";
+		Eigen::JacobiSVD<Eigen::MatrixXcd> svd2(matB, Eigen::ComputeThinU);
+		cout << "Second SVD done!\n";
+		Eigen::JacobiSVD<Eigen::MatrixXcd> svd3(matC, Eigen::ComputeThinU);
+		cout << "Third SVD done!\n";
+
+
+		cout << "Matrix products in preparation" << endl;
+
+		Eigen::MatrixXcd kronecker(nElec * coord1Size, coord2Size * coord1Size * coord1Size);
+		produitKronecker(svd2.matrixU(), svd3.matrixU(), kronecker);
+
+		Eigen::MatrixXcd resultat;
+		resultat = svd1.matrixU().adjoint() * matA * kronecker;
+
+		cout << "Outputting the results\n";
+
+		vector<double> entrees;
+		vector<int> index;
+
+		// stores the modulus of the value
+		for(int i = 0; i < resultat.size(); i++){
+			entrees.push_back(abs(resultat(i)));
+			index.push_back(i);
+		}
+
+		//sort(entrees.begin(), entrees.end(), greater<double>());
+		sort(index.begin(), index.end(), // Personnalized sort on indices
+				[&](int i, int j){return entrees[i] > entrees[j];}); // lambda function
+
+
+
+		double somme = 0.;
+
+		for(double d : entrees){
+			somme += d * d;
+		}
+
+		Index indices;
+
+		#pragma omp ordered
+		{
+			for(int i = 0; i < outputSize; i++){
+				indices = conversion_index(index[i], coord1Size, coord2Size);
+				sortieFichier << time << "\t" << entrees[index[i]] << "\t" 
+					<< indices.e << "\t" << indices.q1 << "\t"
+					<< indices.q2 << "\t" << somme << "\n";
+			}
+
+			for(int i = 0; i < svd1.matrixU().size(); ++i)
+				sortieU << svd1.matrixU()(i) << "\t"; // column major by default in Eigen
+			sortieU << "\n";
+
+			for(int i = 0; i < svd2.matrixU().size(); ++i)
+				sortieV << svd2.matrixU()(i) << "\t"; // column major by default in Eigen
+			sortieV << "\n";
+
+			for(int i = 0; i < svd3.matrixU().size(); ++i)
+				sortieW << svd3.matrixU()(i) << "\t"; // column major by default in Eigen
+			sortieW << "\n";
+		}
 	}
-
-	for(int i = 0; i < outputSize; i++){
-		sortieFichier << entrees[index[i]] << "\t" << index[i] << "\t" << somme << "\n";
-	}
-
 	sortieFichier.close();
+	sortieU.close();
+	sortieV.close();
+	sortieW.close();
 	
 	return 0;
 }
