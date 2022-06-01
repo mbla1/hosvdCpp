@@ -10,7 +10,7 @@
 #include <Eigen>
 #include <omp.h>
 
-#define NUM_THREADS 16 // Number of threads to use
+#define NUM_THREADS 4 // Number of threads to use
 
 using namespace std;
 
@@ -98,12 +98,13 @@ int main(){
 	constexpr int coord2Size = 184;
 	constexpr int nElec = 3;	
 	constexpr int outputSize = 100; // Number of values outputted
-	constexpr int time_limit = 160; // AU
-	constexpr int time_step = 5; // AU
+	constexpr int time_limit = 1800; // AU
+	constexpr int time_step = 50; // AU
+	constexpr double tolerance = 0.99;
 	string path{"resultats/"};
 
 	ofstream sortieFichier;
-	sortieFichier.open(path + "resultatsHosvd.txt");
+	sortieFichier.open(path + "resultatsHosvd2.txt");
 
 	if(!sortieFichier){
 		cerr << "Wrong filename!\n";
@@ -113,13 +114,16 @@ int main(){
 	sortieFichier << "temps\tvaleur\te\tq1\tq2\tsomme_carre\n";
 
 	ofstream sortieU;
-	sortieU.open(path + "matU.txt");
+	sortieU.open(path + "matU2.txt");
 
 	ofstream sortieV;
-	sortieV.open(path + "matV.txt");
+	sortieV.open(path + "matV2.txt");
 
 	ofstream sortieW;
-	sortieW.open(path + "matW.txt");
+	sortieW.open(path + "matW2.txt");
+
+	ofstream sortieNombre;
+	sortieNombre.open(path + "nombre2.txt");
 
 	#pragma omp parallel for ordered schedule(static, 1) // Parallel computing
 	for(int time = 0; time < time_limit; time += time_step){ // Main loop
@@ -175,6 +179,7 @@ int main(){
 
 		vector<double> entrees;
 		vector<int> index;
+		vector<double> cumul;
 
 		// stores the modulus of the value
 		for(int i = 0; i < resultat.size(); i++){
@@ -187,41 +192,60 @@ int main(){
 				[&](int i, int j){return entrees[i] > entrees[j];}); // lambda function
 
 
+		cout << "Performing calculations\n";
 
 		double somme = 0.;
 
-		for(double d : entrees){
-			somme += d * d;
+		cout << "Cumul : \n";
+
+		for(int i = 0; i < entrees.size(); ++i){ // Lecture dans l'ordre décroissant
+			somme += entrees[index[i]] * entrees[index[i]];
+			cumul.push_back(somme);
 		}
+
+		int compteur = 0;
+
+		for(double d : cumul)
+			if(d < tolerance){
+				//cout << d << "\n";
+				++compteur;
+			}
+
+		++compteur; // One more to get to 0.99
+
+		cumul.clear();
 
 		Index indices;
 
 		#pragma omp ordered
 		{
-			for(int i = 0; i < outputSize; i++){
+			for( int i = 0; i < outputSize; ++i){
 				indices = conversion_index(index[i], coord1Size, coord2Size);
-				sortieFichier << time << "\t" << entrees[index[i]] << "\t" 
-					<< indices.e << "\t" << indices.q1 << "\t"
-					<< indices.q2 << "\t" << somme << "\n";
+				//sortieFichier << time << "\t" << entrees[index[i]] << "\t" 
+				//	<< indices.e << "\t" << indices.q1 << "\t"
+				//	<< indices.q2 << "\t" << somme << "\n";
 			}
 
 			for(int i = 0; i < svd1.matrixU().size(); ++i)
-				sortieU << svd1.matrixU()(i) << "\t"; // column major by default in Eigen
+				//sortieU << svd1.matrixU()(i) << "\t"; // column major by default in Eigen
 			sortieU << "\n";
 
 			for(int i = 0; i < svd2.matrixU().size(); ++i)
-				sortieV << svd2.matrixU()(i) << "\t"; // column major by default in Eigen
+				//sortieV << svd2.matrixU()(i) << "\t"; // column major by default in Eigen
 			sortieV << "\n";
 
 			for(int i = 0; i < svd3.matrixU().size(); ++i)
-				sortieW << svd3.matrixU()(i) << "\t"; // column major by default in Eigen
+				//sortieW << svd3.matrixU()(i) << "\t"; // column major by default in Eigen
 			sortieW << "\n";
+
+			sortieNombre << time << "\t" << compteur << "\n";
 		}
 	}
 	sortieFichier.close();
 	sortieU.close();
 	sortieV.close();
 	sortieW.close();
+	sortieNombre.close();
 	
 	return 0;
 }
