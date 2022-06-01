@@ -98,8 +98,8 @@ int main(){
 	constexpr int coord2Size = 184;
 	constexpr int nElec = 3;	
 	constexpr int outputSize = 100; // Number of values outputted
-	constexpr int time_limit = 1800; // AU
-	constexpr int time_step = 50; // AU
+	constexpr int time_limit = 155; // AU
+	constexpr int time_step = 5; // AU
 	constexpr double tolerance = 0.99;
 	string path{"resultats/"};
 
@@ -219,23 +219,23 @@ int main(){
 
 		#pragma omp ordered
 		{
-			for( int i = 0; i < outputSize; ++i){
+			for( int i = 0; i < compteur; ++i){ // that's it?
 				indices = conversion_index(index[i], coord1Size, coord2Size);
-				//sortieFichier << time << "\t" << entrees[index[i]] << "\t" 
-				//	<< indices.e << "\t" << indices.q1 << "\t"
-				//	<< indices.q2 << "\t" << somme << "\n";
+				sortieFichier << time << "\t" << entrees[index[i]] << "\t" 
+					<< indices.e << "\t" << indices.q1 << "\t"
+					<< indices.q2 << "\t" << somme << "\n";
 			}
 
 			for(int i = 0; i < svd1.matrixU().size(); ++i)
-				//sortieU << svd1.matrixU()(i) << "\t"; // column major by default in Eigen
+				sortieU << svd1.matrixU()(i) << "\t"; // column major by default in Eigen
 			sortieU << "\n";
 
 			for(int i = 0; i < svd2.matrixU().size(); ++i)
-				//sortieV << svd2.matrixU()(i) << "\t"; // column major by default in Eigen
+				sortieV << svd2.matrixU()(i) << "\t"; // column major by default in Eigen
 			sortieV << "\n";
 
 			for(int i = 0; i < svd3.matrixU().size(); ++i)
-				//sortieW << svd3.matrixU()(i) << "\t"; // column major by default in Eigen
+				sortieW << svd3.matrixU()(i) << "\t"; // column major by default in Eigen
 			sortieW << "\n";
 
 			sortieNombre << time << "\t" << compteur << "\n";
