@@ -98,8 +98,8 @@ int main(){
 	constexpr int coord2Size = 184;
 	constexpr int nElec = 3;	
 	constexpr int outputSize = 100; // Number of values outputted
-	constexpr int time_limit = 155; // AU
-	constexpr int time_step = 5; // AU
+	constexpr int time_limit = 1800; // AU
+	constexpr int time_step = 50; // AU
 	constexpr double tolerance = 0.99;
 	string path{"resultats/"};
 
@@ -125,8 +125,12 @@ int main(){
 	ofstream sortieNombre;
 	sortieNombre.open(path + "nombre2.txt");
 
+	//ofstream sortie_debug;
+	//sortie_debug.open(path + "debug.txt");
+
 	#pragma omp parallel for ordered schedule(static, 1) // Parallel computing
-	for(int time = 0; time < time_limit; time += time_step){ // Main loop
+	//for(int time = 0; time < time_limit; time += time_step){ // Main loop
+	for(int time = 50; time <  99; time += time_step){ // Debugging
 		vector<complex<double>> table;
 
 		cout << "Loading a wavefunction" << endl;
@@ -173,9 +177,17 @@ int main(){
 		produitKronecker(svd2.matrixU(), svd3.matrixU(), kronecker);
 
 		Eigen::MatrixXcd resultat;
+		//Eigen::MatrixXcd debug;
 		resultat = svd1.matrixU().adjoint() * matA * kronecker;
+		//debug = svd1.matrixU() * resultat * kronecker.adjoint();
 
-		cout << "Outputting the results\n";
+		//cout << debug.rows() << " x " << debug.cols() << "\n";
+
+		//cout << "Export debugging info" << "\n";
+
+		//for(int i = 0; i < debug.size(); ++i){
+		//	sortie_debug << debug(i) << "\n";
+		//}
 
 		vector<double> entrees;
 		vector<int> index;
@@ -196,8 +208,6 @@ int main(){
 
 		double somme = 0.;
 
-		cout << "Cumul : \n";
-
 		for(int i = 0; i < entrees.size(); ++i){ // Lecture dans l'ordre décroissant
 			somme += entrees[index[i]] * entrees[index[i]];
 			cumul.push_back(somme);
@@ -217,9 +227,11 @@ int main(){
 
 		Index indices;
 
+		cout << "Outputting the results\n";
+
 		#pragma omp ordered
 		{
-			for( int i = 0; i < compteur; ++i){ // that's it?
+			for(int i = 0; i < compteur; ++i){ // that's it?
 				indices = conversion_index(index[i], coord1Size, coord2Size);
 				sortieFichier << time << "\t" << entrees[index[i]] << "\t" 
 					<< indices.e << "\t" << indices.q1 << "\t"
@@ -240,12 +252,14 @@ int main(){
 
 			sortieNombre << time << "\t" << compteur << "\n";
 		}
+
 	}
 	sortieFichier.close();
 	sortieU.close();
 	sortieV.close();
 	sortieW.close();
 	sortieNombre.close();
+	//sortie_debug.close();
 	
 	return 0;
 }
